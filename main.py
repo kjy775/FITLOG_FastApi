@@ -18,12 +18,47 @@ def identify_food(food_names: List[str]):
     """
     return food_names
 
+@tool
+def estimate_food_nutrition(
+    serving_gram: int,
+    calorie: float,
+    carbohydrate: float,
+    protein: float,
+    fat: float
+):
+    """
+    DB에 없는 음식의 대략적인 1인분 영양정보를 추정합니다.
+
+    serving_gram:
+        1인분의 대략적인 중량(g)
+
+    calorie:
+        1인분의 대략적인 칼로리(kcal)
+
+    carbohydrate:
+        탄수화물(g)
+
+    protein:
+        단백질(g)
+
+    fat:
+        지방(g)
+    """
+
+    return {
+        "serving_gram": serving_gram,
+        "calorie": calorie,
+        "carbohydrate": carbohydrate,
+        "protein": protein,
+        "fat": fat
+    }
+
 llm = ChatOpenAI(
     model="gpt-4o",
     temperature=0
 )
 
-llm_with_tools = llm.bind_tools([identify_food])
+llm_with_tools = llm.bind_tools([identify_food, estimate_food_nutrition])
 
 @app.post("/findFood")
 async def analyze_food(file: UploadFile = File(...)):
@@ -84,8 +119,13 @@ async def analyze_food(file: UploadFile = File(...)):
     print("====================================")
 
     if response.tool_calls:
-
+    
         tool_call = response.tool_calls[0]
+
+        if tool_call["name"] != "identify_food":
+            return {
+                "message": "잘못된 Tool이 호출되었습니다."
+            }
 
         food_names = tool_call["args"]["food_names"]
 
@@ -98,3 +138,61 @@ async def analyze_food(file: UploadFile = File(...)):
         "foods": [],
         "message": "음식을 인식하지 못했습니다."
     }
+
+@app.get("/findNutrition")
+async def findNutrition(foodName: str):
+
+    message = HumanMessage(
+        content=f"""
+        음식 이름은 "{foodName}"입니다.
+
+        이 음식의 대략적인 1인분 영양정보를 추정해주세요.
+
+        반드시 estimate_food_nutrition tool을 호출하세요.
+
+        다음 항목을 추정해주세요.
+
+        - 1인분 중량(g)
+        - 칼로리(kcal)
+        - 탄수화물(g)
+        - 단백질(g)
+        - 지방(g)
+
+        정확한 영양정보가 아니어도 괜찮습니다.
+        일반적인 1인분을 기준으로 현실적인 추정값을 사용하세요.
+        """
+    )
+
+    response = llm_with_tools.invoke([message])
+
+    print("====================================")
+    print("LLM 응답")
+    print(response)
+    print("====================================")
+
+    print("Tool 호출")
+    print(response.tool_calls)
+    print("====================================")
+
+    if response.tool_calls:
+
+        tool_call = response.tool_calls[0]
+
+        if tool_call["name"] != "estimate_food_nutrition":
+            return {
+                "message": "잘못된 Tool이 호출되었습니다."
+            }
+
+        return {
+            "fname": foodName,
+            "unit": tool_call["args"]["serving_gram"],
+            "kcal": tool_call["args"]["calorie"],
+            "carbs": tool_call["args"]["carbohydrate"],
+            "protein": tool_call["args"]["protein"],
+            "fat": tool_call["args"]["fat"]
+        }
+
+    return {
+        "message": "영양정보를 추정하지 못했습니다."
+    }
+    
