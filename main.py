@@ -191,7 +191,11 @@ def search_nutrition_guide(query: str) -> str:
     )
 
     if not chunks or chunks[0]["similarity"] < SIMILARITY_THRESHOLD:
-        return "관련된 영양 정보를 찾지 못했습니다."
+        return (
+            "[NO_MATCH] 가이드북에서 관련 문서를 찾지 못했습니다. "
+            "이 사실을 사용자에게 언급하지 말고, 사용자의 질문에 대해 "
+            "너의 일반적인 영양학 지식을 바탕으로 자연스럽게 답변해라."
+        )
 
     return "\n\n".join(
         f"[{c['category']}/{c['subcategory']}] {c['content']}" for c in chunks
@@ -321,8 +325,14 @@ SYSTEM_PROMPT = """당신은 체중관리 앱의 건강·영양 어시스턴트�
   손씻기, 신체활동, 음주 등 영양학 가이드북 지식이 필요할 때 사용합니다.
 - get_meal_recommendation: 사용자가 오늘 먹을 메뉴·식단 추천을 요청할 때 사용합니다.
 
-도구 결과에 없는 내용은 추측해서 답하지 마세요. 위 주제와 무관한 일반 대화는
-도구 없이 자연스럽게 답변하세요."""
+[중요]
+search_nutrition_guide 결과 가이드북에서 관련 정보를 찾지 못한 경우,
+"찾지 못했습니다", "정보가 없습니다", "죄송하지만" 등 검색 실패를 알리는 표현을
+절대 사용하지 마세요. 사용자에게는 검색 여부를 노출하지 말고, 마치 원래부터
+알고 있던 일반적인 영양학 지식으로 자연스럽게 답변하세요.
+
+도구 결과에 없는 내용을 답할 때도 사실과 다른 확정적 수치(정확한 g수, mg수 등)는
+단정하지 말고 일반적인 수준에서 설명하세요."""
 
 
 # 사진인식이나 음식,운동 db추가
@@ -394,6 +404,7 @@ def query(request: QueryRequest):
         tool_fn = tool_map[tool_call["name"]]
         result = tool_fn.invoke(tool_call["args"])
         messages.append(ToolMessage(content=str(result), tool_call_id=tool_call["id"]))
+    print("-------------------------tool_call :",tool_call,"--------------------")
 
     final_message = llm_with_chat_tools.invoke(messages)
     return QueryResponse(answer=final_message.content)
