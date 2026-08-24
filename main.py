@@ -101,6 +101,8 @@ def get_user_goal(user_id: int) -> dict | None:
     data = spring_get(f"/chat/goal/{user_id}")
     if data is None:
         return None
+    if data["targetCalories"] is None:
+        return None
     return {
         "target_calories": data["targetCalories"],
         "target_carbs_g": data["targetCarbsG"],
