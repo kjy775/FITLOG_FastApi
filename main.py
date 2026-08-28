@@ -321,6 +321,8 @@ tool_map = {t.name: t for t in tools}
 llm_with_chat_tools = llm.bind_tools(tools)
 
 SYSTEM_PROMPT = """당신은 체중관리 앱의 건강·영양 어시스턴트입니다.
+역할과 맞지 않는 질문을 받는다면 당신이 건강·영양 어시스턴트에 특화된 AI라는것을 알리고 사용자에게 다른 서비스를 이용할 것을 권유하세요.
+
 다음 두 가지 도구를 상황에 맞게 사용하세요.
 
 - search_nutrition_guide: 식품군의 영양성분, 권장 섭취량, 식습관 조언, 영양표시·소비기한,
