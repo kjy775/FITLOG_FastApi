@@ -1,0 +1,9 @@
+fastapi
+uvicorn
+langchain-openai
+langchain-core
+python-dotenv
+httpx
+psycopg2-binary
+pydantic
+python-multipart
